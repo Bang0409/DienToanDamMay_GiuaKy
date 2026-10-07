@@ -11,30 +11,43 @@ const bookSchema = require("./models/Book");
 const app = express();
 
 
+// =====================================================
+// 1. CẤU HÌNH HANDLEBARS
+// =====================================================
 
 app.engine("handlebars", engine());
 app.set("view engine", "handlebars");
 app.set("views", "./views");
 
 
+// =====================================================
+// 2. MIDDLEWARE
+// =====================================================
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
+// =====================================================
+// 3. THÔNG TIN SINH VIÊN
+// =====================================================
 
 const PORT = process.env.PORT || 3000;
 
 const STUDENT_NAME = "Đặng Công Bằng";
 const STUDENT_ID = "23IT019";
 
-
+// 3 số cuối MSSV
 const PREFIX = "019";
 
-
+// Số cuối MSSV = 9
+// VAT = 9 + 4 = 13%
 const VAT = 13;
 
 
+// =====================================================
+// 4. CẤU HÌNH KẾT NỐI MONGODB
+// =====================================================
 
 const connectionOptions = {
   maxPoolSize: 2,
@@ -44,27 +57,35 @@ const connectionOptions = {
 };
 
 
+// =====================================================
+// 5. KẾT NỐI DATABASE BẰNG 2 TÀI KHOẢN
+// =====================================================
+
+// Tài khoản chỉ đọc
 const readConnection = mongoose.createConnection(
   process.env.READ_URI,
   connectionOptions
 );
 
-
+// Tài khoản chỉ ghi
 const writeConnection = mongoose.createConnection(
   process.env.WRITE_URI,
   connectionOptions
 );
 
 
+// =====================================================
+// 6. MODEL READ / WRITE
+// =====================================================
 
-// Model dùng tài khoản READ
+// Model sử dụng tài khoản READ
 const ReadBook = readConnection.model(
   "Book",
   bookSchema,
   "books"
 );
 
-// Model dùng tài khoản WRITE
+// Model sử dụng tài khoản WRITE
 const WriteBook = writeConnection.model(
   "Book",
   bookSchema,
@@ -72,6 +93,9 @@ const WriteBook = writeConnection.model(
 );
 
 
+// =====================================================
+// 7. KIỂM TRA TRẠNG THÁI DATABASE
+// =====================================================
 
 readConnection.on("connected", () => {
   console.log("READ Database connected");
@@ -97,6 +121,9 @@ writeConnection.on("error", (error) => {
 });
 
 
+// =====================================================
+// 8. SESSION LƯU TRÊN MONGODB ATLAS
+// =====================================================
 
 app.use(
   session({
@@ -126,9 +153,15 @@ app.use(
 );
 
 
+// =====================================================
+// 9. TRANG CHỦ - ĐỌC DANH SÁCH SÁCH
+// =====================================================
+
 app.get("/", async (req, res) => {
   try {
 
+    // Tạo dữ liệu session để chứng minh
+    // session được lưu trên MongoDB Atlas
     req.session.lastAccess = new Date();
 
     // Đọc dữ liệu bằng tài khoản READ
@@ -136,7 +169,7 @@ app.get("/", async (req, res) => {
       .find({})
       .lean();
 
-
+    // Render giao diện Handlebars
     res.render("home", {
       books: books,
 
@@ -161,6 +194,10 @@ app.get("/", async (req, res) => {
 });
 
 
+// =====================================================
+// 10. THÊM SÁCH
+// =====================================================
+
 app.post("/books", async (req, res) => {
   try {
 
@@ -171,7 +208,10 @@ app.post("/books", async (req, res) => {
       price
     } = req.body;
 
-------------------------------------------------
+
+    // -------------------------------------------------
+    // Kiểm tra dữ liệu nhập
+    // -------------------------------------------------
 
     if (
       !productCode ||
@@ -179,12 +219,18 @@ app.post("/books", async (req, res) => {
       !author ||
       price === undefined
     ) {
+
       return res.status(400).send(
         "Vui lòng nhập đầy đủ thông tin sách."
       );
     }
 
 
+    // -------------------------------------------------
+    // Kiểm tra mã sản phẩm
+    // MSSV: 23IT019
+    // Mã phải bắt đầu bằng 019
+    // -------------------------------------------------
 
     if (!productCode.startsWith(PREFIX)) {
 
@@ -194,6 +240,16 @@ app.post("/books", async (req, res) => {
     }
 
 
+    // -------------------------------------------------
+    // Chuyển giá từ String sang Number
+    // -------------------------------------------------
+
+    const originalPrice = Number(price);
+
+
+    // -------------------------------------------------
+    // Kiểm tra giá
+    // -------------------------------------------------
 
     if (
       Number.isNaN(originalPrice) ||
@@ -206,10 +262,18 @@ app.post("/books", async (req, res) => {
     }
 
 
+    // -------------------------------------------------
+    // Tính giá sau VAT
+    // VAT = 13%
+    // -------------------------------------------------
+
     const priceAfterVAT =
       originalPrice * (1 + VAT / 100);
 
 
+    // -------------------------------------------------
+    // Ghi dữ liệu bằng tài khoản WRITE
+    // -------------------------------------------------
 
     await WriteBook.create({
 
@@ -231,7 +295,7 @@ app.post("/books", async (req, res) => {
     );
 
 
-
+    // Quay lại trang chủ
     res.redirect("/");
 
   } catch (error) {
@@ -248,6 +312,9 @@ app.post("/books", async (req, res) => {
 });
 
 
+// =====================================================
+// 11. KHỞI ĐỘNG SERVER
+// =====================================================
 
 async function startServer() {
 
@@ -257,19 +324,37 @@ async function startServer() {
       "Connecting to READ and WRITE databases..."
     );
 
-    await Promise.all([
 
-      readConnection.asPromise(),
+    // -------------------------------------------------
+    // Kết nối READ trước
+    // -------------------------------------------------
 
-      writeConnection.asPromise()
+    await readConnection.asPromise();
 
-    ]);
+    console.log(
+      "READ database is ready"
+    );
+
+
+    // -------------------------------------------------
+    // Sau khi READ thành công mới kết nối WRITE
+    // -------------------------------------------------
+
+    await writeConnection.asPromise();
+
+    console.log(
+      "WRITE database is ready"
+    );
 
 
     console.log(
       "READ and WRITE databases are ready"
     );
 
+
+    // -------------------------------------------------
+    // Khởi động Web Server
+    // -------------------------------------------------
 
     app.listen(PORT, () => {
 
@@ -290,11 +375,13 @@ async function startServer() {
       error.message
     );
 
-
     process.exit(1);
   }
 }
 
 
+// =====================================================
+// 12. CHẠY SERVER
+// =====================================================
 
 startServer();
