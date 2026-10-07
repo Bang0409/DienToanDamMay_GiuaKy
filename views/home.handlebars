@@ -1,0 +1,128 @@
+<h1>QUẢN LÝ SÁCH</h1>
+
+<div class="card">
+
+    <h2>Thêm sách mới</h2>
+
+    {{#if error}}
+        <div class="message">
+            {{error}}
+        </div>
+    {{/if}}
+
+    <form action="/books" method="POST">
+
+        <div class="form-group">
+            <label>Mã sản phẩm</label>
+
+            <input
+                type="text"
+                name="productCode"
+                placeholder="Ví dụ: 019001"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label>Tên sách</label>
+
+            <input
+                type="text"
+                name="title"
+                placeholder="Nhập tên sách"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label>Tác giả</label>
+
+            <input
+                type="text"
+                name="author"
+                placeholder="Nhập tên tác giả"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label>Giá</label>
+
+            <input
+                type="number"
+                name="price"
+                min="0"
+                placeholder="Nhập giá sách"
+                required
+            >
+        </div>
+
+        <button type="submit">
+            Thêm sách
+        </button>
+
+    </form>
+
+</div>
+
+
+<div class="card">
+
+    <h2>Danh sách sách</h2>
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Mã sản phẩm</th>
+                <th>Tên sách</th>
+                <th>Tác giả</th>
+                <th>Giá gốc</th>
+                <th>Giá sau VAT</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {{#each books}}
+
+            <tr>
+                <td>{{productCode}}</td>
+                <td>{{title}}</td>
+                <td>{{author}}</td>
+                <td>{{price}}</td>
+                <td>{{priceAfterVAT}}</td>
+            </tr>
+
+            {{else}}
+
+            <tr>
+                <td colspan="5">
+                    Chưa có sách trong hệ thống.
+                </td>
+            </tr>
+
+            {{/each}}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<footer>
+
+    <p>
+        Họ tên: {{studentName}}
+    </p>
+
+    <p>
+        MSSV: {{studentId}}
+    </p>
+
+    <p>
+        Mức VAT áp dụng: {{vat}}%
+    </p>
+
+</footer>
